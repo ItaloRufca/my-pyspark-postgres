@@ -24,10 +24,10 @@
 -- (Limpa o slot de replicação se ele existir de uma execução anterior)
 SELECT pg_drop_replication_slot(slot_name)
 FROM pg_replication_slots
-WHERE slot_name = 'crm_sync_slot';
+WHERE slot_name = 'data_sync_slot';
 
 -- (Limpa a publicação de dados se ela existir)
-DROP PUBLICATION IF EXISTS crm_sync_pub;
+DROP PUBLICATION IF EXISTS data_sync_pub;
 
 --
 -- PASSO 1: Definir a Fonte de Dados (PUBLICATION)
@@ -36,10 +36,10 @@ DROP PUBLICATION IF EXISTS crm_sync_pub;
 -- Aqui, definimos que este canal *somente* transmitirá
 -- mudanças da tabela 'db_loja.cliente'.
 --
-CREATE PUBLICATION crm_sync_pub FOR TABLE db_loja.cliente;
+CREATE PUBLICATION data_sync_pub FOR TABLE db_loja.cliente;
 
 -- -----------------------------------------------------------------
--- !! PARE AQUI !!
+--
 --
 -- PASSO 2: Iniciar a Captura (REPLICATION SLOT)
 --
@@ -49,12 +49,12 @@ CREATE PUBLICATION crm_sync_pub FOR TABLE db_loja.cliente;
 -- slot confirme que os consumiu.
 --
 SELECT pg_create_logical_replication_slot(
- 'crm_sync_slot', -- Nome do slot consumidor
+ 'data_sync_slot', -- Nome do slot consumidor
  'pgoutput' -- Plugin de decodificação padrão
 );
 
 -- -----------------------------------------------------------------
--- !! PARE AQUI !!
+--
 --
 -- PASSO 3: SIMULAÇÃO DE TRANSAÇÃO (Novo Cadastro - INSERT)
 --
@@ -79,11 +79,11 @@ COMMIT;
 -- Consultamos o slot para "ler" as mudanças pendentes.
 --
 SELECT * FROM pg_logical_slot_get_changes(
- 'crm_sync_slot',
+ 'data_sync_slot',
  NULL,
  NULL,
  'publication_names',
- 'crm_sync_pub'
+ 'data_sync_pub'
 );
 --
 -- RESULTADO ESPERADO:
@@ -113,11 +113,11 @@ COMMIT;
 -- Lemos o slot novamente.
 --
 SELECT * FROM pg_logical_slot_get_changes(
- 'crm_sync_slot',
+ 'data_sync_slot',
  NULL,
  NULL,
  'publication_names',
- 'crm_sync_pub'
+ 'data_sync_pub'
 );
 --
 -- RESULTADO ESPERADO:
@@ -146,16 +146,16 @@ WHERE
 COMMIT;
 
 -- -----------------------------------------------------------------
--- !! PARE AQUI !!
+--
 --
 -- PASSO 8: VERIFICAR A CAPTURA (Consumir a Anonimização)
 --
 SELECT * FROM pg_logical_slot_get_changes(
- 'crm_sync_slot',
+ 'data_sync_slot',
  NULL,
  NULL,
  'publication_names',
- 'crm_sync_pub'
+ 'data_sync_pub'
 );
 --
 -- RESULTADO ESPERADO:
@@ -171,10 +171,10 @@ SELECT * FROM pg_logical_slot_get_changes(
 -- (ou consumido regularmente), ele pode encher o disco do servidor.
 
 -- 1. Desativa o slot de captura
-SELECT pg_drop_replication_slot('crm_sync_slot');
+SELECT pg_drop_replication_slot('data_sync_slot');
 
 -- 2. Remove a publicação
-DROP PUBLICATION crm_sync_pub;
+DROP PUBLICATION data_sync_pub;
 
 -- 3. Limpa o registro de teste do banco
 DELETE FROM db_loja.cliente WHERE id = 99999;

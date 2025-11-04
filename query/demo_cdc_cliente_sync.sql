@@ -74,7 +74,7 @@ COMMIT;
 BEGIN;
 UPDATE db_loja.cliente
 SET
- telefone = '(21) 99999-8888'
+ telefone = '(21) 99999-0000'
 WHERE
  id = 99999;
 COMMIT;
